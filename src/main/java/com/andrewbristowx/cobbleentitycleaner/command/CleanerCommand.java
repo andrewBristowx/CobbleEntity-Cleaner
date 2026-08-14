@@ -2,6 +2,7 @@ package com.andrewbristowx.cobbleentitycleaner.command;
 
 import com.andrewbristowx.cobbleentitycleaner.cleanup.CleanupService;
 import com.andrewbristowx.cobbleentitycleaner.config.CleanerConfig;
+import com.andrewbristowx.cobbleentitycleaner.diagnostics.CleanerDiagnostics;
 import com.mojang.brigadier.CommandDispatcher;
 import net.minecraft.ChatFormatting;
 import net.minecraft.commands.CommandSourceStack;
@@ -18,7 +19,34 @@ public final class CleanerCommand {
                 Commands.literal("cobblecleaner")
                         .then(Commands.literal("status")
                                 .executes(context -> {
-                                    context.getSource().sendSuccess(CleanupService::status, false);
+                                    Component status = CleanerDiagnostics.decorateStatus(
+                                            context.getSource().getServer(),
+                                            CleanupService.status()
+                                    );
+                                    context.getSource().sendSuccess(() -> status, false);
+                                    return 1;
+                                }))
+                        .then(Commands.literal("stats")
+                                .requires(source -> source.hasPermission(2))
+                                .executes(context -> {
+                                    for (Component line : CleanerDiagnostics.stats(context.getSource().getServer())) {
+                                        context.getSource().sendSuccess(() -> line, false);
+                                    }
+                                    return 1;
+                                })
+                                .then(Commands.literal("worlds")
+                                        .executes(context -> {
+                                            for (Component line : CleanerDiagnostics.worldStats(context.getSource().getServer())) {
+                                                context.getSource().sendSuccess(() -> line, false);
+                                            }
+                                            return 1;
+                                        })))
+                        .then(Commands.literal("hotspots")
+                                .requires(source -> source.hasPermission(2))
+                                .executes(context -> {
+                                    for (Component line : CleanerDiagnostics.hotspots(context.getSource().getServer(), 8)) {
+                                        context.getSource().sendSuccess(() -> line, false);
+                                    }
                                     return 1;
                                 }))
                         .then(Commands.literal("vote")
@@ -59,7 +87,6 @@ public final class CleanerCommand {
                                                             "Protegidos → especiales: " + result.protectedSpecial()
                                                                     + ", jugador/entrenador: " + result.protectedPlayerOrTrainer()
                                                                     + ", batalla/busy: " + result.protectedBattleOrBusy()
-                                                                    + ", recientes: " + result.protectedRecent()
                                                                     + ", cerca de jugador: " + result.protectedNearby()
                                                                     + ", otros: " + result.protectedOther()
                                                     ).withStyle(ChatFormatting.GRAY)),
