@@ -22,10 +22,10 @@ public final class CleanerConfig {
     public boolean enabled = true;
 
     public int cleanupIntervalMinutes = 20;
-    /** Legacy field kept so old configs migrate cleanly. Recent-spawn age protection is disabled in alpha.3. */
+    /** Legacy field kept so old configs migrate cleanly. Recent-spawn age protection is disabled. */
     public int minimumEntityAgeMinutes = 0;
     public boolean protectNearPlayers = true;
-    public int playerSafetyRadiusBlocks = 48;
+    public int playerSafetyRadiusBlocks = 24;
     public int maxRemovalsPerCleanup = 2000;
 
     public boolean protectShinies = true;
@@ -74,7 +74,7 @@ public final class CleanerConfig {
     private void normalize() {
         cleanupIntervalMinutes = Math.max(2, Math.min(cleanupIntervalMinutes, 1440));
 
-        // Alpha.3 removes the 5-minute age gate entirely. Force legacy configs to zero as well.
+        // Recent-spawn age protection was removed in alpha.3. Keep legacy configs pinned to zero.
         minimumEntityAgeMinutes = 0;
 
         playerSafetyRadiusBlocks = Math.max(0, Math.min(playerSafetyRadiusBlocks, 256));
