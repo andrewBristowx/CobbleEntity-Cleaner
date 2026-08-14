@@ -31,10 +31,22 @@ The eligible voter list is frozen when the vote opens. Players may change their 
 
 By default at least 40% of eligible players must participate. If that minimum is reached, the majority of votes actually cast decides the result. YES must have strictly more votes than NO to skip the cleanup; a tie or insufficient participation lets the cleanup continue.
 
+## Diagnostics
+
+Alpha.4 adds lightweight Cobblemon-specific diagnostics. These scans only run when an admin requests them, so they do not add a permanent monitoring loop.
+
+- `/cobblecleaner status` now includes loaded Pokémon, currently eligible Pokémon, and the configured safety radius.
+- `/cobblecleaner stats` shows loaded Pokémon, unowned wild Pokémon, exact cleanup eligibility and protected categories.
+- `/cobblecleaner stats worlds` shows loaded Pokémon per dimension.
+- `/cobblecleaner hotspots` shows the eight chunks with the most loaded Pokémon, with clickable coordinate-copy and admin teleport buttons.
+
 Commands:
 
 ```text
 /cobblecleaner status
+/cobblecleaner stats
+/cobblecleaner stats worlds
+/cobblecleaner hotspots
 /cobblecleaner vote yes
 /cobblecleaner vote no
 /cobblecleaner vote skip
@@ -43,15 +55,15 @@ Commands:
 /cobblecleaner reload
 ```
 
-`/cobblecleaner vote skip` remains as a backwards-compatible alias for YES. `preview`, `run`, and `reload` require permission level 2.
+`/cobblecleaner vote skip` remains as a backwards-compatible alias for YES. `stats`, `hotspots`, `preview`, `run`, and `reload` require permission level 2.
 
 ## Default timing
 
 - Cleanup every 20 minutes.
 - No minimum entity age is required.
-- Pokémon within 48 blocks of any player are protected.
+- New installs use a 24-block player safety radius.
 - Vote opens 60 seconds before cleanup.
 - Minimum vote participation: 40%.
 - Warning at 10 seconds.
 
-Configuration is generated at `config/cobbleentitycleaner.json`.
+Configuration is generated at `config/cobbleentitycleaner.json`. Existing configs keep their configured safety radius until you change it and reload the mod configuration.
