@@ -25,6 +25,6 @@ public final class CobbleEntityCleaner implements ModInitializer {
                 CleanerCommand.register(dispatcher)
         );
 
-        LOGGER.info("CobbleEntity Cleaner 0.1.0-alpha.3 enabled: no age gate, nearby-player safety and clickable yes/no vote active.");
+        LOGGER.info("CobbleEntity Cleaner 0.1.0-alpha.4 enabled: cleanup, yes/no vote and Cobblemon diagnostics active.");
     }
 }
