@@ -29,13 +29,12 @@ public final class CleanupService {
 
     private static final Map<UUID, Long> FIRST_SEEN_TICK = new HashMap<>();
     private static final Set<UUID> VOTE_ELIGIBLE = new HashSet<>();
-    private static final Set<UUID> SKIP_VOTES = new HashSet<>();
+    private static final Map<UUID, VoteChoice> VOTES = new HashMap<>();
 
     private static long serverTicks;
     private static long nextCleanupTick;
     private static boolean voteActive;
     private static boolean warnedTenSeconds;
-    private static int requiredSkipVotes;
 
     private CleanupService() {
     }
@@ -66,22 +65,36 @@ public final class CleanupService {
 
         if (config.announceWarnings && !warnedTenSeconds && remaining <= 200L && remaining > 0L) {
             warnedTenSeconds = true;
-            broadcast(server, Component.literal("⚠ Limpieza de Pokémon salvajes en 10 segundos.")
-                    .withStyle(ChatFormatting.YELLOW, ChatFormatting.BOLD));
+            MutableComponent warning = Component.literal("⚠ Limpieza de Pokémon salvajes en 10 segundos.")
+                    .withStyle(ChatFormatting.YELLOW, ChatFormatting.BOLD);
+            if (voteActive) {
+                warning.append(Component.literal(" • ").withStyle(ChatFormatting.DARK_GRAY))
+                        .append(voteTallyComponent());
+            }
+            broadcast(server, warning);
         }
 
         if (remaining <= 0L) {
-            closeVote();
+            if (voteActive) {
+                VoteOutcome outcome = currentVoteOutcome();
+                announceVoteOutcome(server, outcome);
+                closeVote();
+                if (outcome.skipCleanup()) {
+                    scheduleNext();
+                    return;
+                }
+            }
+
             CleanupResult result = performCleanup(server, false);
             announceResult(server, result);
             scheduleNext();
         }
     }
 
-    public static int voteSkip(ServerPlayer player) {
+    public static int vote(ServerPlayer player, boolean skipCleanup) {
         CleanerConfig config = CleanerConfig.get();
         if (!config.voteSkipEnabled) {
-            player.sendSystemMessage(Component.literal("La votación para saltar limpiezas está desactivada.")
+            player.sendSystemMessage(Component.literal("La votación para la limpieza está desactivada.")
                     .withStyle(ChatFormatting.RED));
             return 0;
         }
@@ -95,28 +108,33 @@ public final class CleanupService {
                     .withStyle(ChatFormatting.RED));
             return 0;
         }
-        if (!SKIP_VOTES.add(player.getUUID())) {
-            player.sendSystemMessage(Component.literal("Ya votaste para saltar esta limpieza.")
+
+        VoteChoice newChoice = skipCleanup ? VoteChoice.YES : VoteChoice.NO;
+        VoteChoice previousChoice = VOTES.put(player.getUUID(), newChoice);
+        if (previousChoice == newChoice) {
+            player.sendSystemMessage(Component.literal("Ese ya es tu voto actual.")
                     .withStyle(ChatFormatting.GRAY));
             return 0;
         }
 
-        MinecraftServer server = player.server;
-        broadcast(server, Component.literal("☑ ")
-                .withStyle(ChatFormatting.GREEN)
-                .append(player.getName().copy().withStyle(ChatFormatting.AQUA))
-                .append(Component.literal(" votó por saltar la limpieza. ").withStyle(ChatFormatting.GRAY))
-                .append(Component.literal(SKIP_VOTES.size() + "/" + requiredSkipVotes)
-                        .withStyle(ChatFormatting.YELLOW, ChatFormatting.BOLD)));
+        String choiceText = newChoice == VoteChoice.YES ? "SÍ, SALTAR" : "NO, CONTINUAR";
+        ChatFormatting choiceColor = newChoice == VoteChoice.YES ? ChatFormatting.GREEN : ChatFormatting.RED;
 
-        if (SKIP_VOTES.size() >= requiredSkipVotes) {
-            broadcast(server, Component.literal("✓ Votación aprobada: esta limpieza de Pokémon salvajes fue cancelada.")
-                    .withStyle(ChatFormatting.GREEN, ChatFormatting.BOLD));
-            closeVote();
-            scheduleNext();
-            return 1;
-        }
+        MutableComponent message = Component.literal("☑ ")
+                .withStyle(choiceColor)
+                .append(player.getName().copy().withStyle(ChatFormatting.AQUA))
+                .append(Component.literal(previousChoice == null ? " votó: " : " cambió su voto a: ")
+                        .withStyle(ChatFormatting.GRAY))
+                .append(Component.literal(choiceText).withStyle(choiceColor, ChatFormatting.BOLD))
+                .append(Component.literal(" • ").withStyle(ChatFormatting.DARK_GRAY))
+                .append(voteTallyComponent());
+        broadcast(player.server, message);
         return 1;
+    }
+
+    /** Backwards-compatible alias for alpha.1's /vote skip command. */
+    public static int voteSkip(ServerPlayer player) {
+        return vote(player, true);
     }
 
     public static CleanupResult runNow(MinecraftServer server) {
@@ -154,8 +172,8 @@ public final class CleanupService {
                 .append(Component.literal(" • Próxima limpieza: " + time).withStyle(ChatFormatting.GRAY));
 
         if (voteActive) {
-            component.append(Component.literal(" • Votos skip: " + SKIP_VOTES.size() + "/" + requiredSkipVotes)
-                    .withStyle(ChatFormatting.YELLOW));
+            component.append(Component.literal(" • ").withStyle(ChatFormatting.DARK_GRAY))
+                    .append(voteTallyComponent());
         }
         return component;
     }
@@ -165,51 +183,143 @@ public final class CleanupService {
         voteActive = true;
         warnedTenSeconds = false;
         VOTE_ELIGIBLE.clear();
-        SKIP_VOTES.clear();
+        VOTES.clear();
 
         for (ServerPlayer player : server.getPlayerList().getPlayers()) {
             VOTE_ELIGIBLE.add(player.getUUID());
         }
-
-        int percentageRequired = (int) Math.ceil(VOTE_ELIGIBLE.size() * (config.voteRequiredPercent / 100.0D));
-        requiredSkipVotes = Math.max(config.voteMinimumYes, percentageRequired);
-        requiredSkipVotes = Math.max(1, requiredSkipVotes);
 
         if (config.announceWarnings) {
             broadcast(server, Component.literal("⚠ Limpieza de Pokémon salvajes en " + config.voteWindowSeconds + " segundos.")
                     .withStyle(ChatFormatting.YELLOW, ChatFormatting.BOLD));
         }
 
-        MutableComponent voteButton = Component.literal("[ VOTAR PARA SALTAR ]")
+        MutableComponent yesButton = Component.literal("[ ✓ SÍ, SALTAR ]")
                 .withStyle(style -> style
                         .withColor(ChatFormatting.GREEN)
                         .withBold(true)
-                        .withClickEvent(new ClickEvent(ClickEvent.Action.RUN_COMMAND, "/cobblecleaner vote skip"))
+                        .withClickEvent(new ClickEvent(ClickEvent.Action.RUN_COMMAND, "/cobblecleaner vote yes"))
                         .withHoverEvent(new HoverEvent(
                                 HoverEvent.Action.SHOW_TEXT,
-                                Component.literal("Cancela esta ronda de limpieza si se alcanzan suficientes votos")
+                                Component.literal("Vota para saltar esta ronda de limpieza")
                         )));
 
+        MutableComponent noButton = Component.literal("[ ✕ NO, CONTINUAR ]")
+                .withStyle(style -> style
+                        .withColor(ChatFormatting.RED)
+                        .withBold(true)
+                        .withClickEvent(new ClickEvent(ClickEvent.Action.RUN_COMMAND, "/cobblecleaner vote no"))
+                        .withHoverEvent(new HoverEvent(
+                                HoverEvent.Action.SHOW_TEXT,
+                                Component.literal("Vota para continuar con esta ronda de limpieza")
+                        )));
+
+        int minimumParticipants = minimumRequiredParticipants();
         for (ServerPlayer player : server.getPlayerList().getPlayers()) {
             player.sendSystemMessage(
-                    Component.literal("Si estás intentando capturar Pokémon y necesitas más tiempo, vota aquí: ")
+                    Component.literal("¿Quieres saltar esta limpieza? ")
+                            .withStyle(ChatFormatting.WHITE, ChatFormatting.BOLD)
+                            .append(yesButton.copy())
+                            .append(Component.literal("  "))
+                            .append(noButton.copy())
+            );
+            player.sendSystemMessage(
+                    Component.literal("Participación mínima: " + config.voteMinimumParticipationPercent + "% ("
+                                    + minimumParticipants + "/" + VOTE_ELIGIBLE.size() + ")")
                             .withStyle(ChatFormatting.GRAY)
-                            .append(voteButton.copy())
+                            .append(Component.literal(" • Gana la mayoría de los votos emitidos.")
+                                    .withStyle(ChatFormatting.DARK_GRAY))
             );
         }
 
         CobbleEntityCleaner.LOGGER.info(
-                "Cleanup vote opened: {} eligible player(s), {} skip vote(s) required",
+                "Cleanup vote opened: {} eligible player(s), minimum participation {}% ({} player(s))",
                 VOTE_ELIGIBLE.size(),
-                requiredSkipVotes
+                config.voteMinimumParticipationPercent,
+                minimumParticipants
         );
+    }
+
+    private static VoteOutcome currentVoteOutcome() {
+        int yes = countVotes(VoteChoice.YES);
+        int no = countVotes(VoteChoice.NO);
+        int participation = yes + no;
+        int minimumParticipants = minimumRequiredParticipants();
+        boolean participationMet = participation >= minimumParticipants;
+        boolean skipCleanup = participationMet && yes > no;
+        return new VoteOutcome(yes, no, participation, minimumParticipants, VOTE_ELIGIBLE.size(), participationMet, skipCleanup);
+    }
+
+    private static void announceVoteOutcome(MinecraftServer server, VoteOutcome outcome) {
+        if (!outcome.participationMet()) {
+            broadcast(server,
+                    Component.literal("⚠ Votación finalizada: participación insuficiente. ")
+                            .withStyle(ChatFormatting.YELLOW, ChatFormatting.BOLD)
+                            .append(Component.literal("SÍ " + outcome.yesVotes() + " • NO " + outcome.noVotes()
+                                            + " • Participación " + outcome.participation() + "/" + outcome.minimumParticipants())
+                                    .withStyle(ChatFormatting.GRAY))
+                            .append(Component.literal(" • La limpieza continuará.")
+                                    .withStyle(ChatFormatting.RED, ChatFormatting.BOLD))
+            );
+            return;
+        }
+
+        if (outcome.skipCleanup()) {
+            broadcast(server,
+                    Component.literal("✓ Votación finalizada: ")
+                            .withStyle(ChatFormatting.GREEN, ChatFormatting.BOLD)
+                            .append(Component.literal("SÍ " + outcome.yesVotes() + " • NO " + outcome.noVotes())
+                                    .withStyle(ChatFormatting.WHITE))
+                            .append(Component.literal(" • Esta limpieza fue SALTADA.")
+                                    .withStyle(ChatFormatting.GREEN, ChatFormatting.BOLD))
+            );
+        } else {
+            String reason = outcome.yesVotes() == outcome.noVotes() ? "empate" : "ganó NO";
+            broadcast(server,
+                    Component.literal("✕ Votación finalizada: ")
+                            .withStyle(ChatFormatting.RED, ChatFormatting.BOLD)
+                            .append(Component.literal("SÍ " + outcome.yesVotes() + " • NO " + outcome.noVotes())
+                                    .withStyle(ChatFormatting.WHITE))
+                            .append(Component.literal(" • " + reason + "; la limpieza continuará.")
+                                    .withStyle(ChatFormatting.GRAY))
+            );
+        }
+    }
+
+    private static MutableComponent voteTallyComponent() {
+        int yes = countVotes(VoteChoice.YES);
+        int no = countVotes(VoteChoice.NO);
+        int participation = yes + no;
+        return Component.literal("SÍ " + yes)
+                .withStyle(ChatFormatting.GREEN, ChatFormatting.BOLD)
+                .append(Component.literal(" | ").withStyle(ChatFormatting.DARK_GRAY))
+                .append(Component.literal("NO " + no).withStyle(ChatFormatting.RED, ChatFormatting.BOLD))
+                .append(Component.literal(" | Participación " + participation + "/" + VOTE_ELIGIBLE.size())
+                        .withStyle(ChatFormatting.GRAY));
+    }
+
+    private static int countVotes(VoteChoice choice) {
+        int count = 0;
+        for (VoteChoice vote : VOTES.values()) {
+            if (vote == choice) {
+                count++;
+            }
+        }
+        return count;
+    }
+
+    private static int minimumRequiredParticipants() {
+        if (VOTE_ELIGIBLE.isEmpty()) {
+            return 0;
+        }
+        CleanerConfig config = CleanerConfig.get();
+        return Math.max(1, (int) Math.ceil(VOTE_ELIGIBLE.size() * (config.voteMinimumParticipationPercent / 100.0D)));
     }
 
     private static void closeVote() {
         voteActive = false;
         VOTE_ELIGIBLE.clear();
-        SKIP_VOTES.clear();
-        requiredSkipVotes = 0;
+        VOTES.clear();
     }
 
     private static void scheduleNext() {
@@ -344,6 +454,11 @@ public final class CleanupService {
         server.getPlayerList().broadcastSystemMessage(component, false);
     }
 
+    private enum VoteChoice {
+        YES,
+        NO
+    }
+
     private enum ProtectionReason {
         NONE,
         SPECIAL,
@@ -352,6 +467,17 @@ public final class CleanupService {
         RECENT,
         NEAR_PLAYER,
         OTHER
+    }
+
+    private record VoteOutcome(
+            int yesVotes,
+            int noVotes,
+            int participation,
+            int minimumParticipants,
+            int eligiblePlayers,
+            boolean participationMet,
+            boolean skipCleanup
+    ) {
     }
 
     public record CleanupResult(

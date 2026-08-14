@@ -22,6 +22,16 @@ public final class CleanerCommand {
                                     return 1;
                                 }))
                         .then(Commands.literal("vote")
+                                .then(Commands.literal("yes")
+                                        .executes(context -> {
+                                            ServerPlayer player = context.getSource().getPlayerOrException();
+                                            return CleanupService.vote(player, true);
+                                        }))
+                                .then(Commands.literal("no")
+                                        .executes(context -> {
+                                            ServerPlayer player = context.getSource().getPlayerOrException();
+                                            return CleanupService.vote(player, false);
+                                        }))
                                 .then(Commands.literal("skip")
                                         .executes(context -> {
                                             ServerPlayer player = context.getSource().getPlayerOrException();
