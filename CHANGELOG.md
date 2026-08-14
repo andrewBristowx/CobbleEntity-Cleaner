@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.1.0-alpha.3
+
+- Removes the five-minute recent-spawn protection from cleanup eligibility.
+- Existing configs are migrated automatically by forcing `minimumEntityAgeMinutes` to `0`.
+- Keeps the 48-block player safety radius as the main protection for Pokémon players are actively near.
+- Keeps all special, owned, battle, busy, tethered/Pasture and manual-tag protections unchanged.
+
 ## 0.1.0-alpha.2
 
 - Replaces the one-button skip vote with clickable YES / NO choices.
