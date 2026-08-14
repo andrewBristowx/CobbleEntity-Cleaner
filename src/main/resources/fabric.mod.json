@@ -1,0 +1,21 @@
+{
+  "schemaVersion": 1,
+  "id": "cobbleentitycleaner",
+  "version": "${version}",
+  "name": "CobbleEntity Cleaner",
+  "description": "Safe scheduled cleanup of old wild Cobblemon entities with protection rules and vote-skip support.",
+  "authors": ["andrewBristowx"],
+  "environment": "server",
+  "entrypoints": {
+    "main": [
+      "com.andrewbristowx.cobbleentitycleaner.CobbleEntityCleaner"
+    ]
+  },
+  "depends": {
+    "fabricloader": ">=0.17.2",
+    "minecraft": "1.21.1",
+    "java": ">=21",
+    "fabric-api": "*",
+    "cobblemon": ">=1.7.3"
+  }
+}
