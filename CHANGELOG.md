@@ -1,5 +1,17 @@
 # Changelog
 
+## 0.1.0-alpha.2
+
+- Replaces the one-button skip vote with clickable YES / NO choices.
+- Adds `[ ✓ SÍ, SALTAR ]` and `[ ✕ NO, CONTINUAR ]` chat buttons.
+- Adds `/cobblecleaner vote yes` and `/cobblecleaner vote no`.
+- Keeps `/cobblecleaner vote skip` as a backwards-compatible YES alias.
+- Allows eligible players to change their vote while the voting window is active.
+- Shows live YES, NO, and participation totals after votes and in `/cobblecleaner status`.
+- Changes the default vote rule to 40% minimum participation plus simple majority of votes cast.
+- Requires YES to beat NO; ties and insufficient participation continue the cleanup.
+- Keeps the eligible voter set frozen to players who were online when the vote opened.
+
 ## 0.1.0-alpha.1
 
 - Adds scheduled cleanup of old ordinary wild Cobblemon Pokémon entities.
