@@ -38,8 +38,7 @@ public final class CleanerConfig {
 
     public boolean voteSkipEnabled = true;
     public int voteWindowSeconds = 60;
-    public int voteRequiredPercent = 50;
-    public int voteMinimumYes = 1;
+    public int voteMinimumParticipationPercent = 40;
 
     public boolean announceWarnings = true;
     public boolean announceCleanupSummary = true;
@@ -78,8 +77,7 @@ public final class CleanerConfig {
         maxRemovalsPerCleanup = Math.max(1, Math.min(maxRemovalsPerCleanup, 10000));
 
         voteWindowSeconds = Math.max(10, Math.min(voteWindowSeconds, Math.max(10, cleanupIntervalMinutes * 60 - 1)));
-        voteRequiredPercent = Math.max(1, Math.min(voteRequiredPercent, 100));
-        voteMinimumYes = Math.max(1, Math.min(voteMinimumYes, 100));
+        voteMinimumParticipationPercent = Math.max(1, Math.min(voteMinimumParticipationPercent, 100));
     }
 
     private static void save() {
