@@ -1,10 +1,21 @@
 # Changelog
 
+## 0.1.0-alpha.4
+
+- Adds `/cobblecleaner stats` with loaded, wild-unowned, eligible and protected-category counts.
+- Adds `/cobblecleaner stats worlds` with loaded Pokémon totals per dimension.
+- Adds `/cobblecleaner hotspots` with the eight chunks containing the most loaded Pokémon.
+- Hotspot entries include clickable coordinate-copy and admin teleport buttons.
+- Extends `/cobblecleaner status` with loaded Pokémon, current cleanup eligibility and safety radius.
+- Keeps diagnostics on-demand only; no continuous performance sampling loop is added.
+- Changes the default player safety radius for new configs from 48 to 24 blocks.
+- Keeps all cleanup, special-Pokémon, ownership, battle, Pasture and vote protections unchanged.
+
 ## 0.1.0-alpha.3
 
 - Removes the five-minute recent-spawn protection from cleanup eligibility.
 - Existing configs are migrated automatically by forcing `minimumEntityAgeMinutes` to `0`.
-- Keeps the 48-block player safety radius as the main protection for Pokémon players are actively near.
+- Keeps the player safety radius as the main protection for Pokémon players are actively near.
 - Keeps all special, owned, battle, busy, tethered/Pasture and manual-tag protections unchanged.
 
 ## 0.1.0-alpha.2
