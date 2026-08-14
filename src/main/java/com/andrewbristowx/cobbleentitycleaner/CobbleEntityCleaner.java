@@ -25,6 +25,6 @@ public final class CobbleEntityCleaner implements ModInitializer {
                 CleanerCommand.register(dispatcher)
         );
 
-        LOGGER.info("CobbleEntity Cleaner 0.1.0-alpha.1 enabled: safe wild-Pokemon cleanup and vote-skip active.");
+        LOGGER.info("CobbleEntity Cleaner 0.1.0-alpha.2 enabled: safe wild-Pokemon cleanup and clickable yes/no vote active.");
     }
 }
