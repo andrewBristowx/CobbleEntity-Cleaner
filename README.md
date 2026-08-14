@@ -2,7 +2,7 @@
 
 Server-side Fabric utility for Minecraft 1.21.1 + Cobblemon 1.7.3.
 
-CobbleEntity Cleaner periodically removes only old, ordinary wild `PokemonEntity` instances to reduce unnecessary entity load. It deliberately ignores Cobblemon NPC/trainers because it only evaluates Pokémon entities.
+CobbleEntity Cleaner periodically removes ordinary wild `PokemonEntity` instances to reduce unnecessary entity load. It deliberately ignores Cobblemon NPC/trainers because it only evaluates Pokémon entities.
 
 ## Protected by default
 
@@ -14,9 +14,10 @@ CobbleEntity Cleaner periodically removes only old, ordinary wild `PokemonEntity
 - Pokémon currently in battle.
 - Busy Pokémon during transient interactions.
 - Tethered/Pasture Pokémon.
-- Pokémon younger than the configured minimum age.
 - Pokémon inside the safety radius of an online player.
 - Any entity with the scoreboard tag `cobbleentitycleaner_protected`.
+
+The old five-minute age requirement was removed in alpha.3. A normal wild Pokémon can now be cleaned as soon as a cleanup happens, provided it is not covered by any of the protections above. The `minimumEntityAgeMinutes` config key is retained only for migration and is automatically forced to `0`.
 
 ## Clickable vote skip
 
@@ -47,8 +48,8 @@ Commands:
 ## Default timing
 
 - Cleanup every 20 minutes.
-- Wild Pokémon must be loaded for at least 5 minutes before becoming eligible.
-- Pokémon within 48 blocks of any player are protected regardless of age.
+- No minimum entity age is required.
+- Pokémon within 48 blocks of any player are protected.
 - Vote opens 60 seconds before cleanup.
 - Minimum vote participation: 40%.
 - Warning at 10 seconds.
